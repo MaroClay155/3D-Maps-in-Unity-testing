@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LocationsHandler : MonoBehaviour
+public class LocationHandler : MonoBehaviour
 {
     public Text LocationText;
     // Start is called before the first frame update

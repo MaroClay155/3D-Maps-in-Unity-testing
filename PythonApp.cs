@@ -13,7 +13,7 @@ public class PythonApp : MonoBehaviour
     private CancellationTokenSource source;
     public ManualResetEvent allDone;
     public Renderer objectRenderer;
-    private Color matColor;
+    private Texture my_Image;
 
     public static readonly int PORT = 1755;
     public static readonly int WAITTIME = 1;
@@ -35,13 +35,11 @@ public class PythonApp : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        objectRenderer.material.color = matColor;
+        objectRenderer.material.mainTexture = my_Image;
     }
 
     private void ListenEvents(CancellationToken token)
     {
-
-        
         IPHostEntry ipHostInfo = Dns.GetHostEntry(Dns.GetHostName());
         IPAddress ipAddress = ipHostInfo.AddressList.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork);
         IPEndPoint localEndPoint = new IPEndPoint(ipAddress, PORT);
@@ -86,47 +84,42 @@ public class PythonApp : MonoBehaviour
         Socket handler = listener.EndAccept(ar);
  
         allDone.Set();
-  
-        StateObject state = new StateObject();
-        state.workSocket = handler;
-        handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+
+        ImageObject img = new ImageObject();
+        img.workSocket = handler;
+        handler.BeginReceive(img.buffer, 0, ImageObject.BufferSize, 0, new AsyncCallback(ReadCallback), img);
     }
 
     void ReadCallback(IAsyncResult ar)
     {
-        StateObject state = (StateObject)ar.AsyncState;
-        Socket handler = state.workSocket;
+        ImageObject img = (ImageObject)ar.AsyncState;
+        Socket handler = img.workSocket;
 
         int read = handler.EndReceive(ar);
   
         if (read > 0)
         {
-            state.colorCode.Append(Encoding.ASCII.GetString(state.buffer, 0, read));
-            handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, new AsyncCallback(ReadCallback), state);
+            img.colorCode.Append(Encoding.ASCII.GetString(img.buffer, 0, read));
+            handler.BeginReceive(img.buffer, 0, ImageObject.BufferSize, 0, new AsyncCallback(ReadCallback), img);
         }
         else
         {
-            if (state.colorCode.Length > 1)
+            if (img.colorCode.Length > 1)
             { 
-                string content = state.colorCode.ToString();
+                string content = img.colorCode.ToString();
                 print($"Read {content.Length} bytes from socket.\n Data : {content}");
-                SetColors(content);
+                SetImage(content);
             }
             handler.Close();
         }
     }
 
     //Set color to the Material
-    private void SetColors (string data) 
+    private void SetImage (string data) 
     {
         string[] colors = data.Split(',');
-        matColor = new Color()
-        {
-            r = float.Parse(colors[0]) / 255.0f,
-            g = float.Parse(colors[1]) / 255.0f,
-            b = float.Parse(colors[2]) / 255.0f,
-            a = float.Parse(colors[3]) / 255.0f
-        };
+        Debug.Log(colors);
+        //my_Image = byteArrayTo
 
     }
 
@@ -135,7 +128,7 @@ public class PythonApp : MonoBehaviour
         source.Cancel();
     }
 
-    public class StateObject
+    public class ImageObject
     {
         public Socket workSocket = null;
         public const int BufferSize = 1024;
